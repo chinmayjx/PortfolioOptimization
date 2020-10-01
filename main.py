@@ -1,0 +1,1 @@
+print("Mango is the king of fruits")
