@@ -21,3 +21,7 @@ def next_stock():
         return True
     else:
         return False
+
+
+def get_name():
+    return files[index].split(".")[0]
