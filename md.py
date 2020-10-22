@@ -8,7 +8,7 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from pmdarima.arima.utils import ndiffs
 from statsmodels.tsa.arima_model import ARIMA
 
-df = pd.read_csv("stocks/reliance.csv")
+df = pd.read_csv("stkdata/reliance.csv")
 print(df.keys())
 model = ARIMA(df["Close Price"], order=(1,1,1))
 model_fit = model.fit(disp=0)
