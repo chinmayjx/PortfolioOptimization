@@ -12,7 +12,7 @@ def frm(s):
     return s
 
 
-pr = pdf.PDF("pdf/save90.pdf", True)
+pr = pdf.PDF("pdf/savex.pdf", True)
 coverWidth = 90
 while True:
     c = cvr.Cover(stocks.stock["Close Price"], coverWidth)
