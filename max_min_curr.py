@@ -12,7 +12,7 @@ def frm(s):
     return s
 
 
-pr = pdf.PDF("pdf/savex.pdf", True)
+pr = pdf.PDF("pdf/savex.pdf")
 coverWidth = 90
 while True:
     c = cvr.Cover(stocks.stock["Close Price"], coverWidth)
@@ -27,7 +27,7 @@ while True:
     plt.ylabel("curr-price_on_previous_day")
     plt.scatter(x, y, s=2)
     pr.add()
-
+    plt.clf()
     if not stocks.next_stock():
         break
 

@@ -4,38 +4,26 @@ import matplotlib.pyplot as plt
 import pdf
 import pandas as pd
 
-"""
-1. Iterate on stocks.
-2. Create a function analyse for timeseries analysis.
-3. analyse() uses a function to predict p,q,d and other function to generate the forecast data
-
-"""
-
-pr = pdf.PDF("pdf/arima321.pdf", True)
+pr = pdf.PDF("pdf/arima_input.pdf")
 
 
-def predict_pdq(ts):
-    return 3, 2, 1
+def input_pdq():
+    x = tuple(input("Enter, p d q : ").strip().split(" "))
+    if len(x) < 3:
+        x = (1, 1, 1)
+    y = [int(i) for i in x]
+    return y
 
 
-def add_graphs():
-    pass
-
-
-# def analyse(ts):
-#     model = ARIMA(ts, order=predict_pdq(ts))
-#     model_fit = model.fit(disp=0)
-#     # print(model_fit.summary())
-#     model_fit.plot_predict(dynamic=False, ax=plt.gca())
-#     plt.title(stocks.get_name().split(".")[0].split("/")[1])
-#     # plt.show()
-#     pr.add()
-
-
-def analyze(ts, f):
+def arima_man_forecast(ts, f, order=None):
+    confirm = False
+    if order is None:
+        confirm = True
     train = ts[:int(len(ts) * f)]
     test = ts[int(len(ts) * f):]
-    model = ARIMA(train, predict_pdq(ts))
+    if order is None:
+        order = input_pdq()
+    model = ARIMA(train, order)
     model_fit = model.fit(disp=-1)
     plt.plot(test)
     plt.plot(train)
@@ -43,12 +31,21 @@ def analyze(ts, f):
     an = pd.Series(model_fit.forecast(len(ts) - int(len(ts) * f), alpha=0.05)[0], index=test.index)
     plt.plot(an)
     model_fit.plot_predict(start=int(len(ts) * f), end=int(len(ts) * 1.2), dynamic=False, ax=plt.gca())
-    plt.title(stocks.get_name().split(".")[0].split("/")[1])
-    pr.add()
+    plt.title(stocks.get_name().split(".")[0].split("/")[1] + "[p,d,q]:" + str(order))
+    if confirm:
+        pr.add(add=False, show=True)
+        y = input("Enter to confirm : ")
+        if y == "":
+            arima_man_forecast(ts, f, order)
+        else:
+            arima_man_forecast(ts, f)
+    else:
+        pr.add()
+        plt.clf()
 
 
 while True:
-    analyze(stocks.stock["Close Price"], 0.6)
+    arima_man_forecast(stocks.stock["Close Price"], 0.6)
     if not stocks.next_stock():
         break
 
