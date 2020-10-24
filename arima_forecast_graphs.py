@@ -8,7 +8,7 @@ pr = pdf.PDF("pdf/arima_input.pdf")
 
 
 def input_pdq():
-    x = tuple(input("Enter, p d q : ").strip().split(" "))
+    x = tuple(input(stocks.get_only_name() + " : Enter, p d q : ").strip().split(" "))
     if len(x) < 3:
         x = (1, 1, 1)
     y = [int(i) for i in x]

@@ -25,3 +25,7 @@ def next_stock():
 
 def get_name():
     return files[index].split(".")[0]
+
+
+def get_only_name():
+    return get_name().split(".")[0].split("/")[1]
