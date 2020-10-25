@@ -62,4 +62,4 @@ class StockGUI:
         self.win.mainloop()
 
 
-StockGUI("reliance")
+# StockGUI("reliance")
