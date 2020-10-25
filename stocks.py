@@ -2,9 +2,9 @@ import os
 import pandas as pd
 
 index = 0
-files = os.listdir("stocks/")
+files = os.listdir("stkdata/")
 for i in range(len(files)):
-    files[i] = "stocks/" + files[i]
+    files[i] = "stkdata/" + files[i]
 
 stock = pd.read_csv(files[index])
 closingPrices = stock["Close Price"]
@@ -25,3 +25,7 @@ def next_stock():
 
 def get_name():
     return files[index].split(".")[0]
+
+
+def get_only_name():
+    return get_name().split(".")[0].split("/")[1]
