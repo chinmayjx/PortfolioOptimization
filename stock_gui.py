@@ -13,10 +13,28 @@ def arima_man_forecast(ts, f, order, name):
     plt.plot(test)
     plt.plot(train)
 
-    an = pd.Series(model_fit.forecast(len(ts) - int(len(ts) * f), alpha=0.05)[0], index=test.index)
-    plt.plot(an)
+    # an = pd.Series(model_fit.forecast(len(ts) - int(len(ts) * f), alpha=0.05)[0], index=test.index)
+    # plt.plot(an)
     model_fit.plot_predict(start=int(len(ts) * f), end=int(len(ts) * 1.2), dynamic=False, ax=plt.gca())
-    plt.title(name + " [p,d,q]:" + str(order))
+    plt.title(name + " | [p,d,q] : " + str(order))
+    plt.show()
+
+
+def arima_insample(ts, g, order, name):
+    model = ARIMA(ts, order)
+    fit = model.fit(disp=-1)
+    p = pd.Series(dtype=float)
+    print(type(fit))
+    if g == 1:
+        p = fit.predict(typ="levels")
+    else:
+        i = int(0.1*len(ts))
+        while i < ts.index[-1]:
+            p = p.append(fit.predict(start=i, end=i + g - 1, dynamic=True, typ="levels"))
+            i += g
+    plt.plot(ts)
+    plt.plot(p)
+    plt.title(name + " | [p,d,q] : " + str(order)+" | gap="+str(g))
     plt.show()
 
 
@@ -81,16 +99,36 @@ class StockGUI:
             arima_man_forecast(self.ts, float(fraction.get().split(":")[1].strip()), tp, self.name)
 
         forecast_tab = tk.Frame(self.win)
-        forecast_tab.pack(pady=30)
+        forecast_tab.pack(pady=(10,0))
 
         fraction = tk.Entry(forecast_tab)
-        print(self.f)
-        print(self.app_data.dtype)
         fraction.insert(0, "(train%) : " + str(self.f))
         fraction.pack(side=tk.LEFT)
 
-        forecast_btn = tk.Button(forecast_tab, text="forecast", command=call_arima_forecast)
+        forecast_btn = tk.Button(forecast_tab, text="forecast ", command=call_arima_forecast)
         forecast_btn.pack(side=tk.LEFT, padx=20)
+
+        # --------------------------------
+
+        def call_arima_insample():
+            tp = [1, 1, 1]
+            i = 0
+            for x in str(pdq.get().split(":")[1]).strip().split(","):
+                tp[i] = int(x)
+                i += 1
+            arima_insample(self.ts, int(gap.get().split(":")[1].strip()), tp, self.name)
+
+        insample_tab = tk.Frame(self.win)
+        insample_tab.pack(pady=(0,10))
+
+        gap = tk.Entry(insample_tab)
+        print(self.g)
+        print(self.app_data.dtype)
+        gap.insert(0, "(gap) : " + str(self.g))
+        gap.pack(side=tk.LEFT)
+
+        insample_btn = tk.Button(insample_tab, text="insample", command=call_arima_insample)
+        insample_btn.pack(side=tk.LEFT, padx=20)
 
         # --------------------------------
 
@@ -112,11 +150,11 @@ class StockGUI:
         def reset_params():
             pdq.delete(0, 'end')
             pdq.insert(0, "(p,d,q) : " + str(self.p) + "," + str(self.d) + "," + str(self.q))
-            fraction.delete(0,'end')
+            fraction.delete(0, 'end')
             fraction.insert(0, "(train%) : " + str(self.f))
 
         reset_save = tk.Frame(self.win)
-        reset = tk.Button(reset_save, text="reset boxes", command=reset_params)
+        reset = tk.Button(reset_save, text="  reset boxes  ", command=reset_params)
         update = tk.Button(reset_save, text="update params", command=update_params)
         reset.pack(side=tk.LEFT)
         update.pack(side=tk.LEFT)
@@ -141,4 +179,5 @@ class StockGUI:
     def launch(self):
         self.win.mainloop()
 
-# StockGUI("reliance")
+
+# arima_insample(pd.read_csv("ignore/AirPassengers.csv")["Close Price"], 4, (3, 1, 1))
