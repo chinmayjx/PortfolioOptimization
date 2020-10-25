@@ -45,7 +45,7 @@ class StockGUI:
 
         if not os.path.exists("appdata/" + name + ".csv"):
             file = open("appdata/" + name + ".csv", "w+")
-            file.writelines(["key,value\n", "p,1\n", "d,1\n", "q,1\n", "f,1\n", "g,1\n"])
+            file.writelines(["key,value\n", "p,1\n", "d,1\n", "q,1\n", "f,0.5\n", "g,1\n"])
             file.close()
         self.app_data = pd.read_csv("appdata/" + name + ".csv", index_col=0).value
         self.p = int(self.app_data["p"])
@@ -84,7 +84,7 @@ class StockGUI:
 
         pdq = tk.Entry(pdq_frame)
         pdq.configure(justify=tk.CENTER)
-        pdq.insert(0, "(p,d,q) : " + str(self.p) + "," + str(self.d) + "," + str(self.q))
+        pdq.insert(0, "(p,d,q) : " + str(int(self.p)) + "," + str(int(self.d)) + "," + str(int(self.q)))
 
         pdq.pack(side=tk.LEFT)
 
@@ -122,9 +122,7 @@ class StockGUI:
         insample_tab.pack(pady=(0,10))
 
         gap = tk.Entry(insample_tab)
-        print(self.g)
-        print(self.app_data.dtype)
-        gap.insert(0, "(gap) : " + str(self.g))
+        gap.insert(0, "(gap) : " + str(int(self.g)))
         gap.pack(side=tk.LEFT)
 
         insample_btn = tk.Button(insample_tab, text="insample", command=call_arima_insample)
@@ -144,14 +142,17 @@ class StockGUI:
                 self.app_data["q"] = tp[2]
                 print(tp)
             self.app_data["f"] = fraction.get().split(":")[1].strip()
+            self.app_data["g"] = gap.get().split(":")[1].strip()
             iter_params()
             self.app_data.to_csv("appdata/" + name + ".csv")
 
         def reset_params():
             pdq.delete(0, 'end')
-            pdq.insert(0, "(p,d,q) : " + str(self.p) + "," + str(self.d) + "," + str(self.q))
+            pdq.insert(0, "(p,d,q) : " + str(int(self.p)) + "," + str(int(self.d)) + "," + str(int(self.q)))
             fraction.delete(0, 'end')
             fraction.insert(0, "(train%) : " + str(self.f))
+            gap.delete(0, 'end')
+            gap.insert(0, "(gap) : " + str(int(self.g)))
 
         reset_save = tk.Frame(self.win)
         reset = tk.Button(reset_save, text="  reset boxes  ", command=reset_params)
