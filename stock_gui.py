@@ -3,6 +3,7 @@ import tkinter as tk
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 
 def arima_man_forecast(ts, f, order, name):
@@ -28,15 +29,26 @@ def arima_insample(ts, g, order, name):
     if g == 1:
         p = fit.predict(typ="levels")
     else:
-        i = int(0.1*len(ts))
+        i = int(0.1 * len(ts))
         while i < ts.index[-1]:
             p = p.append(fit.predict(start=i, end=i + g - 1, dynamic=True, typ="levels"))
             i += g
     plt.plot(ts)
     plt.plot(p)
-    plt.title(name + " | [p,d,q] : " + str(order)+" | gap="+str(g))
+    plt.title(name + " | [p,d,q] : " + str(order) + " | gap=" + str(g))
     plt.show()
 
+
+def acf(ts,name):
+    plot_acf(ts,ax=plt.gca())
+    plt.title(name + " - ACF")
+    plt.show()
+
+
+def pacf(ts,name):
+    plot_pacf(ts,ax=plt.gca())
+    plt.title(name+" - PACF")
+    plt.show()
 
 class StockGUI:
     def __init__(self, name):
@@ -76,7 +88,7 @@ class StockGUI:
         # --------------------------------
 
         lbl_arima_start = tk.Label(self.win, text="------------ ARIMA ------------")
-        lbl_arima_start.pack()
+        lbl_arima_start.pack(pady=15)
         self.arima_params = ["p", "d", "q", "f", "g"]
 
         pdq_frame = tk.Frame(self.win)
@@ -99,7 +111,7 @@ class StockGUI:
             arima_man_forecast(self.ts, float(fraction.get().split(":")[1].strip()), tp, self.name)
 
         forecast_tab = tk.Frame(self.win)
-        forecast_tab.pack(pady=(10,0))
+        forecast_tab.pack(pady=(10, 0))
 
         fraction = tk.Entry(forecast_tab)
         fraction.insert(0, "(train%) : " + str(self.f))
@@ -119,7 +131,7 @@ class StockGUI:
             arima_insample(self.ts, int(gap.get().split(":")[1].strip()), tp, self.name)
 
         insample_tab = tk.Frame(self.win)
-        insample_tab.pack(pady=(0,10))
+        insample_tab.pack(pady=10)
 
         gap = tk.Entry(insample_tab)
         gap.insert(0, "(gap) : " + str(int(self.g)))
@@ -127,6 +139,17 @@ class StockGUI:
 
         insample_btn = tk.Button(insample_tab, text="insample", command=call_arima_insample)
         insample_btn.pack(side=tk.LEFT, padx=20)
+
+        # --------------------------------
+
+        acpc_tab = tk.Frame(self.win)
+        acpc_tab.pack(pady=(0, 10))
+
+        acf_btn = tk.Button(acpc_tab, text="Plot ACF",command=lambda : acf(self.ts,self.name))
+        acf_btn.pack(side=tk.LEFT)
+
+        pacf_btn = tk.Button(acpc_tab, text="Plot PACF",command=lambda : pacf(self.ts,self.name))
+        pacf_btn.pack(side=tk.LEFT)
 
         # --------------------------------
 
@@ -162,7 +185,7 @@ class StockGUI:
         reset_save.pack()
 
         lbl_arima_end = tk.Label(self.win, text="-------------------------------")
-        lbl_arima_end.pack()
+        lbl_arima_end.pack(pady=15)
 
         ################################################################################
 
@@ -180,5 +203,4 @@ class StockGUI:
     def launch(self):
         self.win.mainloop()
 
-
-# arima_insample(pd.read_csv("ignore/AirPassengers.csv")["Close Price"], 4, (3, 1, 1))
+# pacf(pd.read_csv("ignore/AirPassengers.csv")["Close Price"],"dsda")
