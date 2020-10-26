@@ -1,10 +1,12 @@
 import os
 import tkinter as tk
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
+matplotlib.rcParams["lines.linewidth"]=0.5
 
 def arima_insample(ts, g, order, name):
     model = ARIMA(ts, order=order)
@@ -57,8 +59,8 @@ def pacf(ts, name):
 
 
 def diagnostics(ts, order, name):
-    ARIMA(ts, order=order).fit().plot_diagnostics()
-    plt.title(name + " | [p,d,q] : " + str(order))
+    ARIMA(ts, order=order).fit().plot_diagnostics(figsize=(10,10))
+    plt.suptitle(name + " | [p,d,q] : " + str(order))
     plt.show()
 
 
@@ -231,4 +233,3 @@ class StockGUI:
     def launch(self):
         self.win.mainloop()
 
-# pacf(pd.read_csv("ignore/AirPassengers.csv")["Close Price"],"dsda")
