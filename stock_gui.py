@@ -1,12 +1,36 @@
 import os
 import tkinter as tk
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
+matplotlib.rcParams["lines.linewidth"] = 0.5
+
+
+def text_plot(txt, fs):
+    plt.figure(figsize=fs)
+    font = {'family': 'monospace',
+            'weight': 'normal',
+            'size': 'larger'}
+    plt.text(0, -0.05, txt, fontdict=font)
+    for it in plt.gca().spines.keys():
+        plt.gca().spines[it].set_visible(False)
+    plt.tick_params(which='both', bottom=False, left=False, labelbottom=False, labelleft=False)
+    plt.show()
+
+
+def plot_summary(ts, order, name):
+    model = ARIMA(ts, order=order)
+    fit = model.fit()
+    text_plot(
+        name + "------------------------------------------------------------------------------\n" + str(fit.summary()),
+        (10, 7))
+
 
 def arima_insample(ts, g, order, name):
+    plt.figure()
     model = ARIMA(ts, order=order)
     fit = model.fit()
     p = pd.Series(dtype=float)
@@ -26,6 +50,7 @@ def arima_insample(ts, g, order, name):
 
 
 def arima_man_forecast(ts, f, order, name):
+    plt.figure()
     train = ts[:int(len(ts) * f)]
     test = ts[int(len(ts) * f):]
     model = ARIMA(train, order=order)
@@ -45,20 +70,23 @@ def arima_man_forecast(ts, f, order, name):
 
 
 def acf(ts, name):
+    plt.figure()
     plot_acf(ts, ax=plt.gca())
     plt.title(name + " - ACF")
     plt.show()
 
 
 def pacf(ts, name):
+    plt.figure()
     plot_pacf(ts, ax=plt.gca())
     plt.title(name + " - PACF")
     plt.show()
 
 
 def diagnostics(ts, order, name):
-    ARIMA(ts, order=order).fit().plot_diagnostics()
-    plt.title(name + " | [p,d,q] : " + str(order))
+    plt.figure()
+    ARIMA(ts, order=order).fit().plot_diagnostics(figsize=(10, 10))
+    plt.suptitle(name + " | [p,d,q] : " + str(order))
     plt.show()
 
 
@@ -111,6 +139,14 @@ class StockGUI:
         pdq.insert(0, "(p,d,q) : " + str(int(self.p)) + "," + str(int(self.d)) + "," + str(int(self.q)))
 
         pdq.pack(side=tk.LEFT)
+
+        def get_pdq():
+            tp = [1, 1, 1]
+            i = 0
+            for x in str(pdq.get().split(":")[1]).strip().split(","):
+                tp[i] = int(x)
+                i += 1
+            return tp
 
         # --------------------------------
 
@@ -176,7 +212,11 @@ class StockGUI:
         diagnostic_tab = tk.Frame(self.win)
         diagnostic_tab.pack(pady=(0, 10))
 
-        diag_btn = tk.Button(diagnostic_tab, text="Plot Diagnostics", command=call_diagnostics)
+        summary_btn = tk.Button(diagnostic_tab, text="Summary",
+                                command=lambda: plot_summary(self.ts, get_pdq(), self.name))
+        summary_btn.pack(side=tk.LEFT)
+
+        diag_btn = tk.Button(diagnostic_tab, text="Diagnostics", command=call_diagnostics)
         diag_btn.pack(side=tk.LEFT)
 
         # --------------------------------
@@ -206,8 +246,8 @@ class StockGUI:
             gap.insert(0, "(gap) : " + str(int(self.g)))
 
         reset_save = tk.Frame(self.win)
-        reset = tk.Button(reset_save, text="  reset boxes  ", command=reset_params)
-        update = tk.Button(reset_save, text="update params", command=update_params)
+        reset = tk.Button(reset_save, text="Reset", command=reset_params)
+        update = tk.Button(reset_save, text="Update", command=update_params)
         reset.pack(side=tk.LEFT)
         update.pack(side=tk.LEFT)
         reset_save.pack()
@@ -230,5 +270,3 @@ class StockGUI:
 
     def launch(self):
         self.win.mainloop()
-
-# pacf(pd.read_csv("ignore/AirPassengers.csv")["Close Price"],"dsda")
