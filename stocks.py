@@ -8,8 +8,6 @@ for i in range(len(files)):
 
 stock = pd.read_csv(files[index])
 closingPrices = stock["Close Price"].astype('float64')
-print(stock.shape)
-print(stock.keys())
 print("Current Stock - "+files[index])
 
 def next_stock():
