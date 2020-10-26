@@ -7,10 +7,8 @@ for i in range(len(files)):
     files[i] = "stkdata/" + files[i]
 
 stock = pd.read_csv(files[index])
-closingPrices = stock["Close Price"]
-print(stock.shape)
-print(stock.keys())
-
+closingPrices = stock["Close Price"].astype('float64')
+print("Current Stock - "+files[index])
 
 def next_stock():
     global index, files, stock, closingPrices
@@ -18,6 +16,7 @@ def next_stock():
         index += 1
         stock = pd.read_csv(files[index])
         closingPrices = stock["Close Price"]
+        print("Current Stock - "+files[index])
         return True
     else:
         return False

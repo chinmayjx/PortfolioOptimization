@@ -2,53 +2,65 @@ import os
 import tkinter as tk
 import pandas as pd
 import matplotlib.pyplot as plt
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+
+def arima_insample(ts, g, order, name):
+    model = ARIMA(ts, order=order)
+    fit = model.fit()
+    p = pd.Series(dtype=float)
+    print(type(fit))
+    if g == 1:
+        p = fit.predict()
+    else:
+        i = int(0.1 * len(ts))
+        while i < ts.index[-1]:
+            p = p.append(fit.predict(start=i, end=i + g - 1, dynamic=True))
+            i += g
+    plt.plot(ts)
+    plt.plot(p)
+    plt.title(name + " | [p,d,q] : " + str(order) + " | gap=" + str(g))
+    plt.legend(["actual", "predicted"])
+    plt.show()
 
 
 def arima_man_forecast(ts, f, order, name):
     train = ts[:int(len(ts) * f)]
     test = ts[int(len(ts) * f):]
-    model = ARIMA(train, order)
-    model_fit = model.fit(disp=-1)
-    plt.plot(test)
+    model = ARIMA(train, order=order)
+    fit = model.fit()
     plt.plot(train)
+    plt.plot(test)
 
-    # an = pd.Series(model_fit.forecast(len(ts) - int(len(ts) * f), alpha=0.05)[0], index=test.index)
-    # plt.plot(an)
-    model_fit.plot_predict(start=int(len(ts) * f), end=int(len(ts) * 1.2), dynamic=False, ax=plt.gca())
+    forecast = fit.get_forecast(len(test))
+    plt.plot(forecast.predicted_mean)
+
+    ci = forecast.conf_int()
+    plt.fill_between(x=test.index, y1=ci["lower Close Price"], y2=ci["upper Close Price"], color=(0.5, 0.5, 0.5, 0.2))
+
     plt.title(name + " | [p,d,q] : " + str(order))
+    plt.legend(["train", "test", "forecast", "95% confidence"])
     plt.show()
 
 
-def arima_insample(ts, g, order, name):
-    model = ARIMA(ts, order)
-    fit = model.fit(disp=-1)
-    p = pd.Series(dtype=float)
-    print(type(fit))
-    if g == 1:
-        p = fit.predict(typ="levels")
-    else:
-        i = int(0.1 * len(ts))
-        while i < ts.index[-1]:
-            p = p.append(fit.predict(start=i, end=i + g - 1, dynamic=True, typ="levels"))
-            i += g
-    plt.plot(ts)
-    plt.plot(p)
-    plt.title(name + " | [p,d,q] : " + str(order) + " | gap=" + str(g))
-    plt.show()
-
-
-def acf(ts,name):
-    plot_acf(ts,ax=plt.gca())
+def acf(ts, name):
+    plot_acf(ts, ax=plt.gca())
     plt.title(name + " - ACF")
     plt.show()
 
 
-def pacf(ts,name):
-    plot_pacf(ts,ax=plt.gca())
-    plt.title(name+" - PACF")
+def pacf(ts, name):
+    plot_pacf(ts, ax=plt.gca())
+    plt.title(name + " - PACF")
     plt.show()
+
+
+def diagnostics(ts, order, name):
+    ARIMA(ts, order=order).fit().plot_diagnostics()
+    plt.title(name + " | [p,d,q] : " + str(order))
+    plt.show()
+
 
 class StockGUI:
     def __init__(self, name):
@@ -143,13 +155,29 @@ class StockGUI:
         # --------------------------------
 
         acpc_tab = tk.Frame(self.win)
-        acpc_tab.pack(pady=(0, 10))
+        acpc_tab.pack(pady=10)
 
-        acf_btn = tk.Button(acpc_tab, text="Plot ACF",command=lambda : acf(self.ts,self.name))
+        acf_btn = tk.Button(acpc_tab, text="Plot ACF", command=lambda: acf(self.ts, self.name))
         acf_btn.pack(side=tk.LEFT)
 
-        pacf_btn = tk.Button(acpc_tab, text="Plot PACF",command=lambda : pacf(self.ts,self.name))
+        pacf_btn = tk.Button(acpc_tab, text="Plot PACF", command=lambda: pacf(self.ts, self.name))
         pacf_btn.pack(side=tk.LEFT)
+
+        # --------------------------------
+
+        def call_diagnostics():
+            tp = [1, 1, 1]
+            i = 0
+            for x in str(pdq.get().split(":")[1]).strip().split(","):
+                tp[i] = int(x)
+                i += 1
+            diagnostics(self.ts, tp, self.name)
+
+        diagnostic_tab = tk.Frame(self.win)
+        diagnostic_tab.pack(pady=(0, 10))
+
+        diag_btn = tk.Button(diagnostic_tab, text="Plot Diagnostics", command=call_diagnostics)
+        diag_btn.pack(side=tk.LEFT)
 
         # --------------------------------
 
