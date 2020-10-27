@@ -84,7 +84,7 @@ def pacf(ts, name):
 
 
 def diagnostics(ts, order, name):
-    plt.figure()
+    # plt.figure()
     ARIMA(ts, order=order).fit().plot_diagnostics(figsize=(10, 10))
     plt.suptitle(name + " | [p,d,q] : " + str(order))
     plt.show()
@@ -262,6 +262,7 @@ class StockGUI:
         print(self.df.head)
 
     def pldt(self):
+        plt.figure()
         plt.plot(self.ts)
         plt.title(self.name)
         plt.xlabel("Index")
