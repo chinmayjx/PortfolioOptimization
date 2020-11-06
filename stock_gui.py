@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 import pandas as pd
+import Markov
 import matplotlib
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
@@ -252,12 +253,49 @@ class StockGUI:
         update.pack(side=tk.LEFT)
         reset_save.pack()
 
-        lbl_arima_end = tk.Label(self.win, text="-------------------------------")
-        lbl_arima_end.pack(pady=15)
+        # lbl_arima_end = tk.Label(self.win, text="-------------------------------")
+        # lbl_arima_end.pack(pady=15)
+
+        # --------------------------------
+
+        def density_plots():
+            diff, hl = mk_p.get().split(":")[1].strip().split(",")
+            diff = int(diff)
+            hl = int(hl)
+            br_d, br_u = Markov.get_brackets(self.ts,diff,hl)
+            fig, ax = plt.subplots(2,2,figsize=(10,10))
+            ax[0,0].plot(self.ts)
+            ax[0,0].fill_between(range(0, len(self.ts)), br_d, br_u, color=(0.5, 0.5, 0.5, 0.2))
+            uda = Markov.ud_array(self.ts, br_d, br_u)
+            u,d,m = Markov.udm_lengths(uda)
+            ax[0,1].hist(u,bins=range(0,max(u)))
+            ax[1,0].hist(d,bins=range(0,max(d)))
+            ax[1,1].hist(m,bins=range(0,max(u)))
+
+            ax[0,0].set_title("bins")
+            ax[0,1].set_title("U")
+            ax[1,0].set_title("D")
+            ax[1,1].set_title("M")
+
+            plt.show()
+
+
+        lbl_arima_start = tk.Label(self.win, text="------------ MARKOV ------------")
+        lbl_arima_start.pack(pady=15)
+
+        mk_slab = tk.Frame(self.win)
+        mk_slab.pack(pady=10)
+
+        mk_p = tk.Entry(mk_slab)
+        mk_p.insert(0, "(diff,hl) : 10,10 ")
+        mk_p.pack(side=tk.LEFT)
+
+        mk_plt = tk.Button(mk_slab, text="Density Plots", command=density_plots)
+        mk_plt.pack(side=tk.LEFT, padx=20)
 
         ################################################################################
 
-        self.df = pd.read_csv("stkdata/" + self.name + ".csv")
+        self.df = pd.read_csv("stkdata/" + self.name + ".csv").dropna()
         self.ts = self.df["Close Price"]
         print(self.df.head)
 
