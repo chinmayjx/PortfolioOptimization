@@ -1,8 +1,10 @@
 import stocks
 import math
 import numpy as np
+import stock_iterator
 from matplotlib import pyplot as plt
 from scipy.stats import norm
+import pdf
 
 
 def mav_ary(l, x):
@@ -45,9 +47,10 @@ def dtr(l, x):
     mx = np.max(mav_mn)
     dt = np.empty(l.size)
     for i in range(l.size):
-        dt[i] = l[i] / (1 + mav_mn[i] / mx) / (1 + mav_mn[i] / mx)
+        dt[i] = l[i] / ((1 + mav_mn[i] / mx) ** 3) * 3
     plt.plot(dt)
-    plt.show()
+    pd.add()
+    plt.clf()
     return dt
 
 
@@ -58,7 +61,8 @@ def f(l, nm):
 
     plt.title(nm)
     plt.plot(l)
-    plt.show()
+    pd.add()
+    plt.clf()
 
     # Split Data
     ntrain = int(0.75 * n)
@@ -68,12 +72,14 @@ def f(l, nm):
     plt.title("Split Data")
     plt.plot(range(ntrain), train)
     plt.plot(range(ntrain, n), test)
-    plt.show()
+    pd.add()
+    plt.clf()
     plt.title("Remove Trend")
     dt = dtr(l, w_size)
 
     # Fit Normal
     train = dt
+    ntrain = train.size
 
     def ms(trn):
         dif = np.diff(trn)
@@ -81,7 +87,8 @@ def f(l, nm):
         plt.title("Fit Normal | mean = " + str(mu)[:5] + " sd = " + str(sg)[:5])
         plt.hist(dif, bins=np.arange(-70, 70, 1), density=True)
         plt.plot(np.arange(-70, 70, 1), norm.pdf(np.arange(-70, 70, 1), mu, sg))
-        plt.show()
+        pd.add()
+        plt.clf()
         return mu, sg
 
     mu1, sg1 = ms(train[0:int(ntrain / 5)])
@@ -95,11 +102,15 @@ def f(l, nm):
     mu5, sg5 = ms(train[4 * int(ntrain / 5):])
     print(mu5, sg5)
 
-    mu = (mu1+mu2+mu3+mu4+mu5)/5
-    sg = (sg1+sg2+sg3+sg4+sg5)/5
+    mu = (mu1 + mu2 + mu3 + mu4 + mu5) / 5
+    sg = (sg1 + sg2 + sg3 + sg4 + sg5) / 5
 
-    brt = (mu+sg*sg)/2
-    drt = (sg*sg-mu)/2
-    print(brt,drt)
+    brt = (mu + sg * sg) / 2
+    drt = (sg * sg - mu) / 2
+    print(brt, drt)
 
+
+pd = pdf.PDF("pdf/ab.pdf")
 f(stocks.get_by_name("TCS"), "TCS")
+# stock_iterator.iterate(f)
+pd.save()
