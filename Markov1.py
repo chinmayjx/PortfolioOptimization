@@ -5,7 +5,8 @@ import stock_iterator
 from matplotlib import pyplot as plt
 from scipy.stats import norm
 import pdf
-
+import matplotlib
+matplotlib.rcParams["lines.linewidth"] = 0.5
 
 def mav_ary(l, x):
     a = np.empty(l.size)
@@ -111,6 +112,6 @@ def f(l, nm):
 
 
 pd = pdf.PDF("pdf/ab.pdf")
-f(stocks.get_by_name("TCS"), "TCS")
-# stock_iterator.iterate(f)
+# f(stocks.get_by_name("TCS"), "TCS")
+stock_iterator.iterate(f)
 pd.save()

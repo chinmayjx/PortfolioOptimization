@@ -30,7 +30,7 @@ plt.plot(trend_series)
 
 plt.title("TCS")
 plt.legend(["train", "test", "trend"])
-pdf1.add()
+pdf1.add(show=True)
 plt.clf()
 # Calculate scale by moving variance
 
@@ -78,7 +78,7 @@ lda = (sd1*sd1+mn1)/2
 mu = (sd1*sd1-mn1)/2
 print(mn1,sd1)
 plt.plot(np.arange(-100, 100, 1), norm.pdf(np.arange(-100, 100, 1), mn1, sd1))
-plt.title("lambda = "+str(lda)[:5]+" | mu = "+str(mu)[:5])
+plt.title("mu = " + str(mn1)[:5] + " | sg = " + str(sd1)[:5] + " || birthR = "+str(lda)[:5]+" | deathR = "+str(mu)[:5])
 pdf1.add()
 plt.clf()
 
