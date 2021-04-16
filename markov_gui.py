@@ -130,10 +130,11 @@ class MarGui:
 
         def get_td():
             bb = int(bracket_bound.get())
-            nonlocal transition_count, transition_prob, transition_cum
+            nonlocal transition_count, transition_prob, transition_cum, normal_fits
             transition_count = pd.DataFrame(np.zeros((2 * bb + 1, 2 * bb + 1)), index=range(-1 * bb, bb + 1),
                                             columns=range(-1 * bb, bb + 1),
                                             dtype=float)
+            normal_fits = pd.DataFrame(index=range(-1 * bb, bb + 1),columns=[0,1])
             bb = int(bracket_bound.get())
             for i in range(1, len(train_data)):
                 # print(i,per_diff_data.iat[i],data_ext.iat[i],data.iat[i])
@@ -142,10 +143,17 @@ class MarGui:
             x = []
             y = []
             for i in range(-1 * bb, bb + 1):
+                tm = []
                 for j in range(-1 * bb, bb + 1):
                     for k in range(int(transition_count[i][j])):
                         x.append(i)
                         y.append(j)
+                        tm.append(j)
+                # plt.hist(tm,bins=range(-1 * bb, bb + 1),density=True)
+                # plt.show()
+                mn, sd = norm.fit(tm)
+                normal_fits.loc[i] = [mn, sd]
+            # print(normal_fits)
             plt.hist2d(x, y, bins=[range(-1 * bb, bb + 1), range(-1 * bb, bb + 1)])
             plt.colorbar()
             self.pdf1.add()
@@ -175,6 +183,7 @@ class MarGui:
                 plt.bar(range(-1 * bb, bb + 1), transition_prob[i])
                 plt.title("Transition frequency from " + str(i) + " to x axis values")
                 plt.xticks(range(-1 * bb, bb + 1), range(-1 * bb, bb + 1), rotation='vertical')
+                plt.plot(range(-1 * bb, bb + 1), norm.pdf(range(-1 * bb, bb + 1), normal_fits.loc[i,0], normal_fits.loc[i,1]),color='red')
                 self.pdf1.add()
                 plt.clf()
             self.pdf1.save()
@@ -187,7 +196,7 @@ class MarGui:
         transition_count = None
         transition_prob = None
         transition_cum = None
-        normal_fits = []
+        normal_fits = None
 
         # forecast ----------------------------------
         pred_per_diff = pd.Series(index=range(len(train_data) - 1, end))
@@ -195,7 +204,7 @@ class MarGui:
         def forecast():
             pred_per_diff.loc[len(train_data) - 1] = per_diff_data.iloc[len(train_data) - 1]
             bb = int(bracket_bound.get())
-            for i in range(len(train_data), len(data)+ext_val):
+            for i in range(len(train_data), len(data) + ext_val):
                 rd = np.random.random()
                 br = get_br(pred_per_diff.loc[i - 1])
                 j = -1 * bb
@@ -204,7 +213,7 @@ class MarGui:
                     j += 1
                 pred_per_diff.loc[i] = j
 
-            for i in range(len(train_data), len(data)+ext_val):
+            for i in range(len(train_data), len(data) + ext_val):
                 mv = mav_data.iloc[i]
                 forecast_data.loc[i] = mv + pred_per_diff.loc[i] * mv / 100
                 # print(i,mv,forecast_data.loc[i])
@@ -215,10 +224,36 @@ class MarGui:
             ax[1].plot(train_data)
             ax[1].plot(test_data)
             ax[1].plot(forecast_data)
-            ax[1].legend(["Moving Average","Train Data","Test Data","Forecast Data"])
+            ax[1].legend(["Moving Average", "Train Data", "Test Data", "Forecast Data"])
             plt.show()
 
         forecast_btn = mk_btn("forecast", forecast)
+
+        # forecast2 ---------------------------------
+
+        def forecast2():
+            pred_per_diff.loc[len(train_data) - 1] = per_diff_data.iloc[len(train_data) - 1]
+            bb = int(bracket_bound.get())
+            for i in range(len(train_data), len(data) + ext_val):
+                br = get_br(pred_per_diff.loc[i - 1])
+                j = -1 * bb
+                pred_per_diff.loc[i] = np.random.normal(normal_fits.loc[br,0],normal_fits.loc[br,1])
+
+            for i in range(len(train_data), len(data) + ext_val):
+                mv = mav_data.iloc[i]
+                forecast_data.loc[i] = mv + pred_per_diff.loc[i] * mv / 100
+                # print(i,mv,forecast_data.loc[i])
+            plt.close()
+            fig, ax = plt.subplots(ncols=2, figsize=(40, 20))
+            ax[0].plot(pred_per_diff)
+            ax[1].plot(mav_data)
+            ax[1].plot(train_data)
+            ax[1].plot(test_data)
+            ax[1].plot(forecast_data)
+            ax[1].legend(["Moving Average", "Train Data", "Test Data", "Forecast Data"])
+            plt.show()
+
+        forecast2_btn = mk_btn("forecast_normal", forecast2)
 
         # make plot pdf -----------------------------
 
