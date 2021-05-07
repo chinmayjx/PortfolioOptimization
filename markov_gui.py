@@ -57,6 +57,8 @@ class MarGui:
         # --------------------------
 
         def plf():
+            refresh_params()
+
             plt.figure()
             plt.plot(test_data)
             plt.plot(train_data)
@@ -73,9 +75,29 @@ class MarGui:
         percent_train = prm_slab("Fraction for training", 0.9)
         extra_values = prm_slab("n(values after series)", 100)
         bracket_bound = prm_slab("bracket_boundary", 20)
-        mav_days = prm_slab("n(MAV)", 50)
+        mav_days = prm_slab("n(MAV)", 150)
+        insample_days = prm_slab("insample_days", 10)
 
         # --------------------------
+        def refresh_params():
+            nonlocal ext_val, per_tra, n_mav
+            ext_val = int(extra_values.get())
+            per_tra = float(percent_train.get())
+            n_mav = int(mav_days.get())
+
+        def refresh_series():
+            nonlocal data, test_index, end, data_ext, per_diff_data, train_data, test_data, forecast_data
+            data = pd.Series(ts)
+            test_index = int(per_tra * len(data))
+            end = len(data) + ext_val
+            data_ext = pd.Series(index=range(0, end))
+            for i in range(0, len(data)):
+                data_ext.iloc[i] = data.iloc[i]
+            per_diff_data = pd.Series(index=range(0, end))
+            train_data = data[:test_index]
+            test_data = data[test_index:]
+            forecast_data = pd.Series(index=range(len(train_data), len(data) + ext_val))
+
         ext_val = int(extra_values.get())
         per_tra = float(percent_train.get())
         n_mav = int(mav_days.get())
@@ -92,6 +114,7 @@ class MarGui:
 
         # create moving average series --------------------------
         def plot_mav():
+            refresh_params()
             nonlocal n_mav
             n_mav = int(mav_days.get())
             tmp = data.rolling(n_mav).mean()
@@ -120,6 +143,7 @@ class MarGui:
 
         # get transition data ------------------
         def get_br(v):
+            refresh_params()
             bb = int(bracket_bound.get())
             v = math.floor(v + 0.5)
             if v > bb:
@@ -129,12 +153,13 @@ class MarGui:
             return int(v)
 
         def get_td():
+            refresh_params()
             bb = int(bracket_bound.get())
             nonlocal transition_count, transition_prob, transition_cum, normal_fits
             transition_count = pd.DataFrame(np.zeros((2 * bb + 1, 2 * bb + 1)), index=range(-1 * bb, bb + 1),
                                             columns=range(-1 * bb, bb + 1),
                                             dtype=float)
-            normal_fits = pd.DataFrame(index=range(-1 * bb, bb + 1),columns=[0,1])
+            normal_fits = pd.DataFrame(index=range(-1 * bb, bb + 1), columns=[0, 1])
             bb = int(bracket_bound.get())
             for i in range(1, len(train_data)):
                 # print(i,per_diff_data.iat[i],data_ext.iat[i],data.iat[i])
@@ -183,7 +208,8 @@ class MarGui:
                 plt.bar(range(-1 * bb, bb + 1), transition_prob[i])
                 plt.title("Transition frequency from " + str(i) + " to x axis values")
                 plt.xticks(range(-1 * bb, bb + 1), range(-1 * bb, bb + 1), rotation='vertical')
-                plt.plot(range(-1 * bb, bb + 1), norm.pdf(range(-1 * bb, bb + 1), normal_fits.loc[i,0], normal_fits.loc[i,1]),color='red')
+                plt.plot(range(-1 * bb, bb + 1),
+                         norm.pdf(range(-1 * bb, bb + 1), normal_fits.loc[i, 0], normal_fits.loc[i, 1]), color='red')
                 self.pdf1.add()
                 plt.clf()
             self.pdf1.save()
@@ -202,6 +228,7 @@ class MarGui:
         pred_per_diff = pd.Series(index=range(len(train_data) - 1, end))
 
         def forecast():
+            refresh_params()
             pred_per_diff.loc[len(train_data) - 1] = per_diff_data.iloc[len(train_data) - 1]
             bb = int(bracket_bound.get())
             for i in range(len(train_data), len(data) + ext_val):
@@ -232,13 +259,17 @@ class MarGui:
         # forecast2 ---------------------------------
 
         def forecast2():
+            refresh_params()
             pred_per_diff.loc[len(train_data) - 1] = per_diff_data.iloc[len(train_data) - 1]
             bb = int(bracket_bound.get())
             for i in range(len(train_data), len(data) + ext_val):
                 br = get_br(pred_per_diff.loc[i - 1])
-                j = -1 * bb
-                pred_per_diff.loc[i] = np.random.normal(normal_fits.loc[br,0],normal_fits.loc[br,1])
-
+                tm = np.random.normal(normal_fits.loc[br, 0], normal_fits.loc[br, 1])
+                if tm > bb:
+                    tm = bb
+                if tm < -1 * bb:
+                    tm = -1 * bb
+                pred_per_diff.loc[i] = tm
             for i in range(len(train_data), len(data) + ext_val):
                 mv = mav_data.iloc[i]
                 forecast_data.loc[i] = mv + pred_per_diff.loc[i] * mv / 100
@@ -255,6 +286,69 @@ class MarGui:
 
         forecast2_btn = mk_btn("forecast_normal", forecast2)
 
+        # get confidence
+        def get_c():
+            refresh_params()
+            cf = 0
+            bb = int(bracket_bound.get())
+            for i in range(len(train_data), len(data)):
+                br = get_br(per_diff_data.loc[i - 1])
+                cd = norm.cdf(per_diff_data.loc[i], normal_fits.loc[br, 0], normal_fits.loc[br, 1])
+                if cd < 0.5:
+                    cd = 0.5 - cd
+                if cd > 0.5:
+                    cd -= 0.5
+                cf += cd
+            get_conf.config(text="confidence value = " + str(cf / len(test_data)))
+
+        get_conf = mk_btn("confidence value", get_c)
+
+        # insample ----------------------------------
+        def isp():
+            refresh_params()
+            idys = int(insample_days.get())
+            pred_per_diff.loc[len(train_data) - 1] = per_diff_data.iloc[len(train_data) - 1]
+            bb = int(bracket_bound.get())
+            mn_diff = 0
+            mn_ct = 0
+            pr_diff = 0
+            for i in range(len(train_data), len(data)):
+                br = get_br(pred_per_diff.loc[i - 1])
+                tm = np.random.normal(normal_fits.loc[br, 0], normal_fits.loc[br, 1])
+                if tm > bb:
+                    tm = bb
+                if tm < -1 * bb:
+                    tm = -1 * bb
+                if i>len(train_data) and i % idys == 0:
+                    pred_per_diff.loc[i] = per_diff_data.loc[i]
+                    mn_diff += abs(pred_per_diff.loc[i - 1] - per_diff_data.loc[i - 1])
+                    mn_ct += 1
+                else:
+                    pred_per_diff.loc[i] = tm
+            print(mn_diff / (mn_ct + 1))
+            for i in range(len(train_data), len(data) + ext_val):
+                mv = mav_data.iloc[i]
+                forecast_data.loc[i] = mv + pred_per_diff.loc[i] * mv / 100
+                # print(i,mv,forecast_data.loc[i])
+            for i in range(len(train_data), len(data)):
+                if i>len(train_data) and i % idys == 0:
+                    pr_diff += abs(forecast_data.loc[i - 1] - data.loc[i - 1])
+            print(pr_diff/mn_ct)
+            plt.close()
+            fig, ax = plt.subplots(ncols=2, figsize=(40, 20))
+            ax[0].plot(pred_per_diff)
+            ax[1].plot(mav_data)
+            ax[1].plot(train_data)
+            ax[1].plot(test_data)
+            ax[1].plot(forecast_data)
+            ax[1].legend(["Moving Average", "Train Data", "Test Data", "Forecast Data"])
+            ax[1].title.set_text("mean diff: percent = "+str(mn_diff/mn_ct)[:5]+" | price = "+str(pr_diff/mn_ct)[:5])
+            plt.show()
+
+        idy = mk_btn("insample", isp)
+
+        # refSer
+        refs = mk_btn("refresh series", refresh_series)
         # make plot pdf -----------------------------
 
         # ---------------------------
