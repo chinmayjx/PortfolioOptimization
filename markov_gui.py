@@ -75,7 +75,7 @@ class MarGui:
         percent_train = prm_slab("Fraction for training", 0.9)
         extra_values = prm_slab("n(values after series)", 100)
         bracket_bound = prm_slab("bracket_boundary", 20)
-        mav_days = prm_slab("n(MAV)", 150)
+        mav_days = prm_slab("n(MAV)", 50)
         insample_days = prm_slab("insample_days", 10)
 
         # --------------------------
@@ -84,8 +84,10 @@ class MarGui:
             ext_val = int(extra_values.get())
             per_tra = float(percent_train.get())
             n_mav = int(mav_days.get())
+            print("refresh param")
 
         def refresh_series():
+            refresh_params()
             nonlocal data, test_index, end, data_ext, per_diff_data, train_data, test_data, forecast_data
             data = pd.Series(ts)
             test_index = int(per_tra * len(data))
