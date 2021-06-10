@@ -313,6 +313,10 @@ class MarGui:
             bb = int(bracket_bound.get())
             mn_diff = 0
             mn_ct = 0
+            diff_rng=5
+            diff_rng2=7
+            diff_ct=0
+            diff_ct2=0
             pr_diff = 0
             for i in range(len(train_data), len(data)):
                 br = get_br(pred_per_diff.loc[i - 1])
@@ -323,7 +327,12 @@ class MarGui:
                     tm = -1 * bb
                 if i>len(train_data) and i % idys == 0:
                     pred_per_diff.loc[i] = per_diff_data.loc[i]
-                    mn_diff += abs(pred_per_diff.loc[i - 1] - per_diff_data.loc[i - 1])
+                    tmp=abs(pred_per_diff.loc[i - 1] - per_diff_data.loc[i - 1])
+                    mn_diff += tmp
+                    if tmp<=diff_rng:
+                        diff_ct+=1
+                    if tmp<=diff_rng2:
+                        diff_ct2+=1
                     mn_ct += 1
                 else:
                     pred_per_diff.loc[i] = tm
@@ -344,7 +353,7 @@ class MarGui:
             ax[1].plot(test_data)
             ax[1].plot(forecast_data)
             ax[1].legend(["Moving Average", "Train Data", "Test Data", "Forecast Data"])
-            ax[1].title.set_text("mean diff: percent = "+str(mn_diff/mn_ct)[:5]+" | price = "+str(pr_diff/mn_ct)[:5])
+            ax[1].title.set_text("mean diff: percent = "+str(mn_diff/mn_ct)[:5]+" | price = "+str(pr_diff/mn_ct)[:5]+" | "+str(diff_ct/mn_ct*100)[:5]+"%"+" | "+str(diff_ct2/mn_ct*100)[:5]+"%")
             plt.show()
 
         idy = mk_btn("insample", isp)
