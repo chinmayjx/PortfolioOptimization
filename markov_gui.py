@@ -44,7 +44,7 @@ class MarGui:
             return btn
 
         df = pd.read_csv("stkdata/" + self.name + ".csv").dropna()
-        ts = df["Close Price"]
+        ts = df["Close Price"].dropna()
 
         # window config ###############################################################
         win = tk.Tk()
