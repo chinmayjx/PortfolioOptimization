@@ -43,8 +43,8 @@ class MarGui:
             self.btnct += 1
             return btn
 
-        df = pd.read_csv("stkdata/" + self.name + ".csv").dropna()
-        ts = df["Close Price"].dropna()
+        df = pd.read_csv("stkdata/" + self.name + ".csv")
+        ts = df["Close Price"].dropna().to_numpy()
 
         # window config ###############################################################
         win = tk.Tk()
@@ -72,7 +72,7 @@ class MarGui:
 
         # --------------------------
 
-        percent_train = prm_slab("Fraction for training", 0.9)
+        percent_train = prm_slab("Fraction for training", 0.5)
         extra_values = prm_slab("n(values after series)", 100)
         bracket_bound = prm_slab("bracket_boundary", 20)
         mav_days = prm_slab("n(MAV)", 50)
@@ -137,6 +137,7 @@ class MarGui:
             ax[0].plot(mav_data)
             for i in range(0, len(data)):
                 per_diff_data.iloc[i] = 100 * (data_ext.iloc[i] - mav_data.iloc[i]) / mav_data.iloc[i]
+                # if per_diff_data[i]==0: per_diff_data[i]+=1
             ax[1].plot(per_diff_data)
             plt.show()
 
@@ -145,7 +146,6 @@ class MarGui:
 
         # get transition data ------------------
         def get_br(v):
-            refresh_params()
             bb = int(bracket_bound.get())
             v = math.floor(v + 0.5)
             if v > bb:
@@ -313,10 +313,10 @@ class MarGui:
             bb = int(bracket_bound.get())
             mn_diff = 0
             mn_ct = 0
-            diff_rng=5
-            diff_rng2=7
-            diff_ct=0
-            diff_ct2=0
+            diff_rng = 5
+            diff_rng2 = 7
+            diff_ct = 0
+            diff_ct2 = 0
             pr_diff = 0
             for i in range(len(train_data), len(data)):
                 br = get_br(pred_per_diff.loc[i - 1])
@@ -325,14 +325,14 @@ class MarGui:
                     tm = bb
                 if tm < -1 * bb:
                     tm = -1 * bb
-                if i>len(train_data) and i % idys == 0:
+                if i > len(train_data) and i % idys == 0:
                     pred_per_diff.loc[i] = per_diff_data.loc[i]
-                    tmp=abs(pred_per_diff.loc[i - 1] - per_diff_data.loc[i - 1])
+                    tmp = abs(pred_per_diff.loc[i - 1] - per_diff_data.loc[i - 1])
                     mn_diff += tmp
-                    if tmp<=diff_rng:
-                        diff_ct+=1
-                    if tmp<=diff_rng2:
-                        diff_ct2+=1
+                    if tmp <= diff_rng:
+                        diff_ct += 1
+                    if tmp <= diff_rng2:
+                        diff_ct2 += 1
                     mn_ct += 1
                 else:
                     pred_per_diff.loc[i] = tm
@@ -342,9 +342,9 @@ class MarGui:
                 forecast_data.loc[i] = mv + pred_per_diff.loc[i] * mv / 100
                 # print(i,mv,forecast_data.loc[i])
             for i in range(len(train_data), len(data)):
-                if i>len(train_data) and i % idys == 0:
+                if i > len(train_data) and i % idys == 0:
                     pr_diff += abs(forecast_data.loc[i - 1] - data.loc[i - 1])
-            print(pr_diff/mn_ct)
+            print(pr_diff / mn_ct)
             plt.close()
             fig, ax = plt.subplots(ncols=2, figsize=(40, 20))
             ax[0].plot(pred_per_diff)
@@ -353,14 +353,72 @@ class MarGui:
             ax[1].plot(test_data)
             ax[1].plot(forecast_data)
             ax[1].legend(["Moving Average", "Train Data", "Test Data", "Forecast Data"])
-            ax[1].title.set_text("mean diff: percent = "+str(mn_diff/mn_ct)[:5]+" | price = "+str(pr_diff/mn_ct)[:5]+" | "+str(diff_ct/mn_ct*100)[:5]+"%"+" | "+str(diff_ct2/mn_ct*100)[:5]+"%")
+            ax[1].title.set_text(
+                "mean diff: percent = " + str(mn_diff / mn_ct)[:5] + " | price = " + str(pr_diff / mn_ct)[
+                                                                                     :5] + " | " + str(
+                    diff_ct / mn_ct * 100)[:5] + "%" + " | " + str(diff_ct2 / mn_ct * 100)[:5] + "%")
             plt.show()
 
         idy = mk_btn("insample", isp)
 
         # refSer
         refs = mk_btn("refresh series", refresh_series)
-        # make plot pdf -----------------------------
 
+        # make plot pdf -----------------------------
+        # Simulate
+        ntran_prob = None
+        bb = int(bracket_bound.get())
+        n = 3
+
+        def mntp():
+            nonlocal ntran_prob
+            ntran_prob = transition_prob.to_numpy()
+            for i in range(n):
+                ntran_prob = np.dot(ntran_prob, ntran_prob)
+
+        def trn_prob(x, y):
+            return ntran_prob[x + bb][y + bb]
+
+        def incr_prob(x):
+            sm = 0
+            for i in range(x, bb + 1):
+                sm += trn_prob(x, i)
+            return sm
+
+        def sim():
+            mntp()
+            inarr = pd.Series(index=test_data.index)
+            tparr = pd.Series(0, index=test_data.index)
+            parr = pd.Series(0, index=test_data.index)
+            parr[test_data.index[0]]=100000
+            tparr[test_data.index[0]]=100000
+            ip = -1
+            ns = 1
+            conf = 0
+            wt = 0.1
+            for i in test_data.index:
+                inarr[i] = incr_prob(get_br(per_diff_data[i]))
+            for i in test_data.index[1:]:
+                conf = wt * conf + (1 - wt) * inarr[i]
+                if ip == -1 and conf > 0.7:
+                    ns = (conf-0.6)*100
+                    ip = data[i]
+                if ip > 0 and conf < 0.7:
+                    parr[i] = parr[i - 1] + (data[i] - ip)*ns
+                    tparr[i] = parr[i]
+                    ip = -1
+                    continue
+                parr[i] = parr[i - 1]
+                if ip > 0:
+                    tparr[i] = (data[i] - ip)*ns
+                else:
+                    tparr[i] = tparr[i - 1]
+            plt.plot(test_data)
+            plt.plot(parr)
+            plt.plot(tparr)
+            plt.legend(["td","parr","tparr"])
+            plt.show()
+
+        sim_ = mk_btn("Simulate", sim)
         # ---------------------------
         win.mainloop()
