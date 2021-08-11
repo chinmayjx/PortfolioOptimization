@@ -8,8 +8,9 @@ for i in range(len(files)):
     files[i] = "stkdata/" + files[i]
 
 stock = pd.read_csv(files[index])
-closingPrices = stock["Close Price"].astype('float64')
-print("Current Stock - "+files[index])
+closingPrices = stock["Close Price"].astype('float64').dropna()
+print("Current Stock - " + files[index])
+
 
 def next_stock():
     global index, files, stock, closingPrices
@@ -17,20 +18,22 @@ def next_stock():
         index += 1
         stock = pd.read_csv(files[index])
         closingPrices = stock["Close Price"]
-        print("Current Stock - "+files[index])
+        print("Current Stock - " + files[index])
         return True
     else:
         return False
 
+
 def get_by_name(n):
     for x in filesx:
-        if(n+".csv"==x):
-            return pd.read_csv("stkdata/"+n+".csv").dropna()["Close Price"]
+        if n + ".csv" == x:
+            return pd.read_csv("stkdata/" + n + ".csv")["Close Price"].dropna().to_numpy()
     return None
+
+
 def get_name():
     return files[index].split(".")[0]
 
 
 def get_only_name():
     return get_name().split(".")[0].split("/")[1]
-

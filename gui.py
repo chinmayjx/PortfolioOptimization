@@ -1,6 +1,7 @@
 import tkinter as tk
 import stock_gui
 import markov_gui
+import ngui
 import pdf
 import os
 
@@ -14,7 +15,8 @@ def fill_list():
 
 def list_click(x):
     # stock_gui.StockGUI(lb.get(lb.curselection())).launch()
-    markov_gui.MarGui(lb.get(lb.curselection())).launch()
+    # markov_gui.MarGui(lb.get(lb.curselection())).launch()
+    ngui.MarGui(lb.get(lb.curselection())).launch()
 
 
 win = tk.Tk()

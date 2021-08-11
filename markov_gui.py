@@ -75,8 +75,10 @@ class MarGui:
         percent_train = prm_slab("Fraction for training", 0.5)
         extra_values = prm_slab("n(values after series)", 100)
         bracket_bound = prm_slab("bracket_boundary", 20)
+        mvd = 50
+        if name == "ASTRAZEN": mvd = 20
+        insample_days = prm_slab("insample_days", mvd)
         mav_days = prm_slab("n(MAV)", 50)
-        insample_days = prm_slab("insample_days", 10)
 
         # --------------------------
         def refresh_params():
@@ -167,6 +169,7 @@ class MarGui:
                 # print(i,per_diff_data.iat[i],data_ext.iat[i],data.iat[i])
                 transition_count[get_br(per_diff_data.iat[i - 1])][get_br(per_diff_data.iat[i])] += 1
             print(transition_count)
+            # print(transition_count.isnull().any())
             x = []
             y = []
             for i in range(-1 * bb, bb + 1):
@@ -181,10 +184,7 @@ class MarGui:
                 mn, sd = norm.fit(tm)
                 normal_fits.loc[i] = [mn, sd]
             # print(normal_fits)
-            plt.hist2d(x, y, bins=[range(-1 * bb, bb + 1), range(-1 * bb, bb + 1)])
-            plt.colorbar()
-            self.pdf1.add()
-            plt.clf()
+
 
             transition_prob = pd.DataFrame(np.zeros((2 * bb + 1, 2 * bb + 1)), index=range(-1 * bb, bb + 1),
                                            columns=range(-1 * bb, bb + 1),
@@ -205,7 +205,29 @@ class MarGui:
                     transition_cum[i][j] = transition_prob[i][j] + sm
                     sm = transition_cum[i][j]
             transition_cum.to_csv("tmp.csv")
+            for i in range(-1 * bb, bb + 1):
+                mn, sd = norm.fit(transition_prob)
 
+        def export_td():
+            plt.title(insample_days)
+            x = []
+            y = []
+            for i in range(-1 * bb, bb + 1):
+                tm = []
+                for j in range(-1 * bb, bb + 1):
+                    for k in range(int(transition_count[i][j])):
+                        x.append(i)
+                        y.append(j)
+                        tm.append(j)
+                # plt.hist(tm,bins=range(-1 * bb, bb + 1),density=True)
+                # plt.show()
+                mn, sd = norm.fit(tm)
+                normal_fits.loc[i] = [mn, sd]
+            # print(normal_fits)
+            plt.hist2d(x, y, bins=[range(-1 * bb, bb + 1), range(-1 * bb, bb + 1)])
+            plt.colorbar()
+            self.pdf1.add()
+            plt.clf()
             for i in range(-1 * bb, bb + 1):
                 plt.bar(range(-1 * bb, bb + 1), transition_prob[i])
                 plt.title("Transition frequency from " + str(i) + " to x axis values")
@@ -217,10 +239,8 @@ class MarGui:
             self.pdf1.save()
             print("save")
 
-            for i in range(-1 * bb, bb + 1):
-                mn, sd = norm.fit(transition_prob)
-
         transition_data_btn = mk_btn("Get Transition Data", get_td)
+        export_data_btn = mk_btn("Export td", export_td)
         transition_count = None
         transition_prob = None
         transition_cum = None
@@ -368,7 +388,7 @@ class MarGui:
         # Simulate
         ntran_prob = None
         bb = int(bracket_bound.get())
-        n = 3
+        n = 10
 
         def mntp():
             nonlocal ntran_prob
@@ -390,8 +410,8 @@ class MarGui:
             inarr = pd.Series(index=test_data.index)
             tparr = pd.Series(0, index=test_data.index)
             parr = pd.Series(0, index=test_data.index)
-            parr[test_data.index[0]]=100000
-            tparr[test_data.index[0]]=100000
+            parr[test_data.index[0]] = 0
+            tparr[test_data.index[0]] = 0
             ip = -1
             ns = 1
             conf = 0
@@ -401,22 +421,22 @@ class MarGui:
             for i in test_data.index[1:]:
                 conf = wt * conf + (1 - wt) * inarr[i]
                 if ip == -1 and conf > 0.7:
-                    ns = (conf-0.6)*100
+                    ns = (conf - 0.6) * 1000
                     ip = data[i]
                 if ip > 0 and conf < 0.7:
-                    parr[i] = parr[i - 1] + (data[i] - ip)*ns
+                    parr[i] = parr[i - 1] + (data[i] - ip) * ns
                     tparr[i] = parr[i]
                     ip = -1
                     continue
                 parr[i] = parr[i - 1]
                 if ip > 0:
-                    tparr[i] = (data[i] - ip)*ns
+                    tparr[i] = (data[i] - ip) * ns + parr[i]
                 else:
                     tparr[i] = tparr[i - 1]
             plt.plot(test_data)
             plt.plot(parr)
             plt.plot(tparr)
-            plt.legend(["td","parr","tparr"])
+            plt.legend(["td", "parr", "tparr"])
             plt.show()
 
         sim_ = mk_btn("Simulate", sim)
