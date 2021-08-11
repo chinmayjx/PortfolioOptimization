@@ -56,8 +56,9 @@ class MarGui:
         name = name
         win.title(name)
         win.minsize(int(screen_width / 5), int(screen_height / 7))
-    #     self.work(ts)
-    # def work(self, ts):
+
+        #     self.work(ts)
+        # def work(self, ts):
         # methods #####################################################################
         def get_mav():
             nonlocal mav_array
@@ -70,7 +71,7 @@ class MarGui:
             per_diff = pd.Series(index=index, dtype=float)
             brackets = pd.Series(index=index, dtype=float)
             for i in index:
-                per_diff[i] = ((data[i] - mav_array[i]) * 100) / (abs(data[i]) + 1)
+                per_diff[i] = ((data[i] - mav_array[i]) * 100) / (abs(mav_array[i]) + 1)
                 brackets[i] = get_br(per_diff[i])
 
         def get_br(v):
@@ -123,12 +124,44 @@ class MarGui:
                 normal_fits[i][0] = np.mean(dt)
                 normal_fits[i][1] = np.std(dt)
 
+        def make_pred():
+            nonlocal predictions, pred_per_dev
+            predictions = pd.Series(index=index, dtype=float)
+            pred_per_dev = pd.Series(index=index, dtype=float)
+            for i in range(jump):
+                predictions[i] = data[i]
+                pred_per_dev[i] = brackets[i]
+
+            for i in range(jump, len(data)):
+                pb = brackets[i - jump]
+                rd = np.random.normal(normal_fits[pb][0], normal_fits[pb][1])
+                if rd < -1 * bracket_bound:
+                    rd = -1 * bracket_bound
+                if rd > bracket_bound:
+                    rd = bracket_bound
+
+                pred_per_dev[i] = rd
+                predictions[i] = (rd/100)*(abs(mav_array[i])+1)+mav_array[i]
+
         # variables ###################################################################
         name = self.name
         percent_train_data = 0.5
-        bracket_bound = 20
-        jump = 1
-        mav_days = 30
+        bracket_bound = 15
+        jump = 10
+        mav_days = 25
+
+        if name == "TCS":
+            bracket_bound = 15
+            jump = 5
+            mav_days = 12
+
+        if name == "ASTRAZEN":
+            bracket_bound = 15
+            jump = 10
+            mav_days = 12
+
+        print(bracket_bound, jump, mav_days)
+
         test_begin_index = int(percent_train_data * len(ts))
         data = pandas.Series(ts, dtype=float)
         index = data.index
@@ -137,48 +170,75 @@ class MarGui:
         test = data[test_begin_index:]
         test_index = test.index
 
-        mav_array = None
+        mav_array = pd.Series(dtype=float)
         get_mav()
 
-        per_diff = None
-        brackets = None
+        per_diff = pd.Series(dtype=float)
+        brackets = pd.Series(dtype=float)
         get_per_diff()
 
-        transition_count = None
-        transition_prob = None
+        transition_count = pd.DataFrame(dtype=float)
+        transition_prob = pd.DataFrame(dtype=float)
         get_transition_count()
-        # print(transition_count.to_string())
+        print(transition_count.to_string())
 
-        normal_fits = None
+        normal_fits = pd.DataFrame(dtype=float)
         fit_normals()
-        # print(normal_fits)
 
-        # plot_mat(transition_prob)
-        # plt.plot(data)
-        # plt.plot(train)
-        # plt.plot(test)
-        # plt.plot(mav_array)
-        # plt.show()
-        # plt.plot(per_diff)
-        # plt.plot(brackets)
-        # plt.show()
+        predictions = pd.Series(dtype=float)
+        pred_per_dev = pd.Series(dtype=float)
+        make_pred()
+
+        per_pred_stats = []
+        pred_stats = []
+        for i in index:
+            dff = abs(predictions[i]-data[i])
+            pred_stats.append(dff)
+            per_pred_stats.append((dff*100)/data[i])
 
         # ui ######################################################
         def plot_m():
             plt.plot(train)
             plt.plot(test)
+            plt.plot(mav_array)
             plt.show()
-        plot_btn = mk_btn("plot",plot_m)
+
+        plot_btn = mk_btn("plot", plot_m)
 
         def ptm():
             plot_mat(transition_prob)
+
         plot_transition_prob = mk_btn("plot transition matrix", ptm)
+
+        def plt_norm():
+            idx = range(-bracket_bound, bracket_bound + 1)
+            for i in idx:
+                plt.title("transitions from bracket " + str(i))
+                plt.bar(idx, transition_prob.loc[i])
+                plt.plot(idx, norm.pdf(idx, normal_fits[i][0], normal_fits[i][1]), color='red')
+                self.pdf1.add()
+                plt.clf()
+            self.pdf1.save()
+
+        pnf = mk_btn("plot normals", plt_norm)
+
+        def stdst_plt():
+            idx = range(-bracket_bound, bracket_bound + 1)
+            plt.bar(idx, transition_prob.loc[0])
+            plt.plot(idx, norm.pdf(idx, normal_fits[0][0], normal_fits[0][1]), color='red')
+            plt.show()
+
+        stdst_btn = mk_btn("steady state prob", stdst_plt)
+
+        def pred_st():
+            fig, ax = plt.subplots(ncols=2, figsize=(40, 20))
+            ax[0].hist(per_pred_stats, bins=100)
+            ax[1].hist(pred_stats, bins=100)
+            plt.show()
+        pred_btn = mk_btn("pred stats", pred_st)
         win.mainloop()
 
 
 nm = "TCS"
 # nm = "ASTRAZEN"
 MarGui(nm).launch()
-
-# import stocks
-# MarGui(nm).work(stocks.get_by_name(nm))
